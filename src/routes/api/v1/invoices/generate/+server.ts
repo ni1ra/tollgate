@@ -32,9 +32,9 @@ function getVatRate(country: string): number {
 function calculateTieredAmount(
 	tiers: { up_to: number; unit_amount: number }[],
 	quantity: number
-): { items: { description: string; quantity: number; unit_price: number; amount: number }[]; total: number } {
+): { items: { description: string; quantity: number; unit_amount: number; amount: number }[]; total: number } {
 	const sorted = [...tiers].sort((a, b) => a.up_to - b.up_to);
-	const items: { description: string; quantity: number; unit_price: number; amount: number }[] = [];
+	const items: { description: string; quantity: number; unit_amount: number; amount: number }[] = [];
 	let remaining = quantity;
 	let prevCap = 0;
 	let total = 0;
@@ -49,7 +49,7 @@ function calculateTieredAmount(
 		items.push({
 			description: `Units ${prevCap + 1} - ${prevCap + tierQty} @ ${tier.unit_amount}/unit`,
 			quantity: tierQty,
-			unit_price: tier.unit_amount,
+			unit_amount: tier.unit_amount,
 			amount
 		});
 
@@ -65,7 +65,7 @@ function calculateTieredAmount(
 		items.push({
 			description: `Units ${prevCap + 1}+ @ ${lastRate}/unit (overflow)`,
 			quantity: remaining,
-			unit_price: lastRate,
+			unit_amount: lastRate,
 			amount
 		});
 		total += amount;
@@ -121,7 +121,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	}
 
 	// Calculate line items based on plan type
-	const lineItems: { description: string; quantity: number; unit_price: number; amount: number }[] = [];
+	const lineItems: { description: string; quantity: number; unit_amount: number; amount: number }[] = [];
 	let subtotal = 0;
 
 	if (plan.type === 'flat') {
@@ -129,7 +129,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		lineItems.push({
 			description: `${plan.name} (${plan.interval}ly) x ${subscription.quantity}`,
 			quantity: subscription.quantity,
-			unit_price: plan.amount,
+			unit_amount: plan.amount,
 			amount
 		});
 		subtotal = amount;
@@ -180,7 +180,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		lineItems.push({
 			description: `${plan.name}: ${totalUsage} ${plan.usage_unit || 'units'} @ ${plan.amount}/${plan.usage_unit || 'unit'}`,
 			quantity: totalUsage,
-			unit_price: plan.amount,
+			unit_amount: plan.amount,
 			amount
 		});
 		subtotal = amount;
@@ -215,11 +215,11 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		for (const item of lineItems) {
 			const [row] = await tx`
 				INSERT INTO tollgate_invoice_items (
-					id, invoice_id, description, quantity, unit_price, amount, created_at
+					id, invoice_id, description, quantity, unit_amount, amount, created_at
 				)
 				VALUES (
 					${crypto.randomUUID()}, ${invoiceId},
-					${item.description}, ${item.quantity}, ${item.unit_price}, ${item.amount},
+					${item.description}, ${item.quantity}, ${item.unit_amount}, ${item.amount},
 					NOW()
 				)
 				RETURNING *
