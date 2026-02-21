@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import sql from '$lib/server/db';
-import { validateSession, generateId } from '$lib/server/auth';
+import { validateSession } from '$lib/server/auth';
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
 	const session = await validateSession(cookies);
@@ -36,10 +36,13 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 
 	// Delete in FK-safe order within a transaction
 	await sql.begin(async (tx) => {
-		// 1. Usage records
+		// 1. Usage records (via subscriptions)
 		await tx`
 			DELETE FROM tollgate_usage_records
-			WHERE customer_id = ${customer_id} AND tenant_id = ${tenantId}
+			WHERE subscription_id IN (
+				SELECT id FROM tollgate_subscriptions
+				WHERE customer_id = ${customer_id} AND tenant_id = ${tenantId}
+			) AND tenant_id = ${tenantId}
 		`;
 
 		// 2. Invoice items (via invoices belonging to this customer)
@@ -71,8 +74,8 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 
 		// Audit log
 		await tx`
-			INSERT INTO tollgate_audit_log (id, tenant_id, actor_id, action, entity_type, entity_id, created_at)
-			VALUES (${generateId()}, ${tenantId}, ${session.userId}, ${'gdpr_delete'}, ${'customer'}, ${customer_id}, NOW())
+			INSERT INTO tollgate_audit_log (id, tenant_id, user_id, action, entity_type, entity_id, created_at)
+			VALUES (${crypto.randomUUID()}, ${tenantId}, ${session.userId}, ${'gdpr_delete'}, ${'customer'}, ${customer_id}, NOW())
 		`;
 	});
 

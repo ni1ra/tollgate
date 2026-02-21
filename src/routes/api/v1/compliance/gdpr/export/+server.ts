@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import sql from '$lib/server/db';
-import { validateSession, generateId } from '$lib/server/auth';
+import { validateSession } from '$lib/server/auth';
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
 	const session = await validateSession(cookies);
@@ -57,16 +57,19 @@ async function handleExport(
 			ORDER BY created_at DESC
 		`;
 
-		const usageRecords = await sql`
-			SELECT * FROM tollgate_usage_records
-			WHERE customer_id = ${customerId} AND tenant_id = ${tenantId}
-			ORDER BY recorded_at DESC
-		`;
+		const subIds = subscriptions.map((s: { id: string }) => s.id);
+		const usageRecords = subIds.length > 0
+			? await sql`
+				SELECT * FROM tollgate_usage_records
+				WHERE subscription_id = ANY(${sql.array(subIds)}) AND tenant_id = ${tenantId}
+				ORDER BY recorded_at DESC
+			`
+			: [];
 
 		// Audit log
 		await sql`
-			INSERT INTO tollgate_audit_log (id, tenant_id, actor_id, action, entity_type, entity_id, created_at)
-			VALUES (${generateId()}, ${tenantId}, ${actorId}, ${'gdpr_export'}, ${'customer'}, ${customerId}, NOW())
+			INSERT INTO tollgate_audit_log (id, tenant_id, user_id, action, entity_type, entity_id, created_at)
+			VALUES (${crypto.randomUUID()}, ${tenantId}, ${actorId}, ${'gdpr_export'}, ${'customer'}, ${customerId}, NOW())
 		`;
 
 		return json({
@@ -102,8 +105,8 @@ async function handleExport(
 
 	// Audit log
 	await sql`
-		INSERT INTO tollgate_audit_log (id, tenant_id, actor_id, action, entity_type, entity_id, created_at)
-		VALUES (${generateId()}, ${tenantId}, ${actorId}, ${'gdpr_export'}, ${'tenant'}, ${tenantId}, NOW())
+		INSERT INTO tollgate_audit_log (id, tenant_id, user_id, action, entity_type, entity_id, created_at)
+		VALUES (${crypto.randomUUID()}, ${tenantId}, ${actorId}, ${'gdpr_export'}, ${'tenant'}, ${tenantId}, NOW())
 	`;
 
 	return json({
