@@ -35,7 +35,7 @@ async function _dispatchWebhooks(
 		SELECT id, url, secret, events
 		FROM tollgate_webhooks
 		WHERE tenant_id = ${tenantId}
-		  AND deleted_at IS NULL
+		  AND active = true
 	`;
 
 	for (const webhook of webhooks) {
@@ -62,7 +62,7 @@ async function _dispatchWebhooks(
 		// Create pending event record
 		await sql`
 			INSERT INTO tollgate_webhook_events (id, tenant_id, webhook_id, event_type, payload, status, created_at)
-			VALUES (${eventId}, ${tenantId}, ${webhook.id}, ${eventType}, ${payload}, ${'pending'}, NOW())
+			VALUES (${eventId}, ${tenantId}, ${webhook.id}, ${eventType}, ${payload}::jsonb, ${'pending'}, NOW())
 		`;
 
 		// Compute HMAC-SHA256 signature
@@ -87,7 +87,7 @@ async function _dispatchWebhooks(
 				const statusCode = res.status;
 				await sql`
 					UPDATE tollgate_webhook_events
-					SET status = ${status}, status_code = ${statusCode}, delivered_at = NOW()
+					SET status = ${status}, response_code = ${statusCode}, delivered_at = NOW()
 					WHERE id = ${eventId}
 				`;
 			})

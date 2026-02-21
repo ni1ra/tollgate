@@ -171,7 +171,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			FROM tollgate_usage_records
 			WHERE subscription_id = ${subscription_id}
 			  AND tenant_id = ${user.tenantId}
-			  AND timestamp >= ${sinceDate}
+			  AND recorded_at >= ${sinceDate}
 		`;
 
 		const totalUsage = Number(usageSum.total_usage);

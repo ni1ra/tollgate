@@ -12,7 +12,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
 		SELECT id, url, events, created_at
 		FROM tollgate_webhooks
 		WHERE tenant_id = ${user.tenantId}
-		  AND deleted_at IS NULL
+		  AND active = true
 		ORDER BY created_at DESC
 	`;
 

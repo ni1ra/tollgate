@@ -26,11 +26,11 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 	const offset = parseInt(url.searchParams.get('offset') || '0');
 
 	const records = await sql`
-		SELECT id, subscription_id, quantity, timestamp, description, created_at
+		SELECT id, subscription_id, quantity, recorded_at, description, created_at
 		FROM tollgate_usage_records
 		WHERE subscription_id = ${subscriptionId}
 		  AND tenant_id = ${user.tenantId}
-		ORDER BY timestamp DESC
+		ORDER BY recorded_at DESC
 		LIMIT ${limit}
 		OFFSET ${offset}
 	`;
@@ -45,7 +45,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	let body: {
 		subscription_id?: string;
 		quantity?: number;
-		timestamp?: string;
+		recorded_at?: string;
 		description?: string;
 	};
 	try {
@@ -54,7 +54,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		return json({ error: 'Invalid JSON body' }, { status: 400 });
 	}
 
-	const { subscription_id, quantity, timestamp, description } = body;
+	const { subscription_id, quantity, recorded_at, description } = body;
 
 	if (!subscription_id || quantity === undefined || quantity === null) {
 		return json({ error: 'subscription_id and quantity are required' }, { status: 400 });
@@ -74,10 +74,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	}
 
 	const id = crypto.randomUUID();
-	const ts = timestamp || new Date().toISOString();
+	const ts = recorded_at || new Date().toISOString();
 
 	const [record] = await sql`
-		INSERT INTO tollgate_usage_records (id, tenant_id, subscription_id, quantity, timestamp, description, created_at)
+		INSERT INTO tollgate_usage_records (id, tenant_id, subscription_id, quantity, recorded_at, description, created_at)
 		VALUES (${id}, ${user.tenantId}, ${subscription_id}, ${quantity}, ${ts}, ${description || null}, NOW())
 		RETURNING *
 	`;
@@ -86,7 +86,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		usage_record_id: id,
 		subscription_id,
 		quantity,
-		timestamp: ts
+		recorded_at: ts
 	});
 
 	return json({ data: record }, { status: 201 });
