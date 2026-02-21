@@ -75,7 +75,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			${email},
 			${country},
 			${vat_id || null},
-			${metadata ? JSON.stringify(metadata) : null},
+			${sql.json(metadata || {})}::jsonb,
 			NOW(),
 			NOW()
 		)

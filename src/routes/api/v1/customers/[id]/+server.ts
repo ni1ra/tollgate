@@ -83,7 +83,7 @@ export const PATCH: RequestHandler = async ({ request, cookies, params }) => {
 			email      = COALESCE(${body.email ?? null}, email),
 			country    = COALESCE(${body.country ?? null}, country),
 			vat_id     = ${body.vat_id !== undefined ? body.vat_id : null},
-			metadata   = COALESCE(${body.metadata ? JSON.stringify(body.metadata) : null}, metadata),
+			metadata   = COALESCE(${body.metadata ? sql.json(body.metadata) : null}::jsonb, metadata),
 			updated_at = NOW()
 		WHERE id = ${params.id}
 		  AND tenant_id = ${user.tenantId}

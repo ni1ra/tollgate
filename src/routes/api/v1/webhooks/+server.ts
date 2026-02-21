@@ -52,7 +52,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
 	const [webhook] = await sql`
 		INSERT INTO tollgate_webhooks (id, tenant_id, url, events, secret, created_at)
-		VALUES (${id}, ${user.tenantId}, ${url}, ${JSON.stringify(events)}, ${signingSecret}, NOW())
+		VALUES (${id}, ${user.tenantId}, ${url}, ${sql.array(events || [])}, ${signingSecret}, NOW())
 		RETURNING id, url, events, created_at
 	`;
 
