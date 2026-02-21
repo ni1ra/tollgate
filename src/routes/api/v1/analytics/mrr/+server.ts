@@ -19,7 +19,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
 			COUNT(s.id)::int           AS subscribers,
 			COALESCE(SUM(
 				CASE
-					WHEN p.billing_interval = 'yearly' THEN p.amount / 12
+					WHEN p.interval = 'year' THEN p.amount / 12
 					ELSE p.amount
 				END
 			), 0) AS mrr

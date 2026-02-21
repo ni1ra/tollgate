@@ -54,10 +54,11 @@ export const GET: RequestHandler = async ({ cookies }) => {
 				GROUP BY tenant_id
 			) c ON c.tenant_id = t.id
 			LEFT JOIN (
-				SELECT tenant_id, SUM(amount) AS mrr
-				FROM tollgate_subscriptions
-				WHERE status = 'active'
-				GROUP BY tenant_id
+				SELECT sub.tenant_id, SUM(CASE WHEN p.interval = 'year' THEN p.amount / 12 ELSE p.amount END) AS mrr
+				FROM tollgate_subscriptions sub
+				JOIN tollgate_plans p ON p.id = sub.plan_id
+				WHERE sub.status = 'active'
+				GROUP BY sub.tenant_id
 			) s ON s.tenant_id = t.id
 			ORDER BY t.created_at DESC
 		`,
